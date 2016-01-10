@@ -98,6 +98,7 @@ void loop(void){
     Serial.println("Start pomiaru");
     DS18B20.begin();
     DS18B20.requestTemperatures();
+    //dht.begin();
     delay(800);
   
     t_pole = DS18B20.getTempC(pole);
@@ -106,7 +107,7 @@ void loop(void){
     t_grzejnik = DS18B20.getTempC(grzejnik);
     lux = lightMeter.readLightLevel();
     cisnienie = bmp.readPressure()/100.0;
-    wilgotnosc = dht.readHumidity();
+    wilgotnosc = dht.readTemperature();//dht.readHumidity();
     
     Serial.print("Pole: ");
     Serial.println(t_pole);
