@@ -11,7 +11,7 @@
 #include <DallasTemperature.h>
 #include "hasla.h"
 
-#define DHTPIN 16
+#define DHTPIN 0
 #define DHTTYPE DHT22
 DHT dht(DHTPIN, DHTTYPE);
 #define ONE_WIRE_BUS 2  // DS18B20 pin
@@ -98,17 +98,18 @@ void loop(void){
     Serial.println("Start pomiaru");
     DS18B20.begin();
     DS18B20.requestTemperatures();
-    //dht.begin();
-    delay(800);
-  
+    delay(300);
+    wilgotnosc = dht.readHumidity();
+    delay(100);
+    lux = lightMeter.readLightLevel();
+    delay(100);
+    cisnienie = bmp.readPressure()/100.0;
+    delay(300);
     t_pole = DS18B20.getTempC(pole);
     t_dom = DS18B20.getTempC(dom);
     t_okno = DS18B20.getTempC(okno);
     t_grzejnik = DS18B20.getTempC(grzejnik);
-    lux = lightMeter.readLightLevel();
-    cisnienie = bmp.readPressure()/100.0;
-    wilgotnosc = dht.readTemperature();//dht.readHumidity();
-    
+
     Serial.print("Pole: ");
     Serial.println(t_pole);
     Serial.print("Dom: ");
@@ -185,36 +186,36 @@ void loop(void){
        Serial.println("send to Hosting");    
       }
     client.stop();
-    if (client.connect(server3,85)) {
-      String postStr = apiKey;
-             postStr +="&pole=";
-             postStr += String(t_pole);
-             postStr +="&dom=";
-             postStr += String(t_dom);
-             postStr +="&okno=";
-             postStr += String(t_okno);
-             postStr +="&grzejnik=";
-             postStr += String(t_grzejnik);
-             postStr +="&cisnienie=";
-             postStr += String(cisnienie);
-             postStr +="&wilgotnosc=";
-             postStr += String(wilgotnosc);
-             postStr +="&naslonecznienie=";
-             postStr += String(lux);
-             postStr += "\r\n\r\n";
-   
-       client.println("POST /wifi_pogoda.php HTTP/1.1"); 
-       client.println("Host: marcin.myvnc.com"); 
-       client.println("Connection: close"); 
-       client.println("Content-Type: application/x-www-form-urlencoded"); 
-       client.print("Content-Length: "); 
-       client.print(postStr.length()); 
-       client.print("\n\n"); 
-       client.print(postStr);
-             
-       Serial.println("send to Raspberry");    
-      }
-    client.stop();
+//    if (client.connect(server3,85)) {
+//      String postStr = apiKey;
+//             postStr +="&pole=";
+//             postStr += String(t_pole);
+//             postStr +="&dom=";
+//             postStr += String(t_dom);
+//             postStr +="&okno=";
+//             postStr += String(t_okno);
+//             postStr +="&grzejnik=";
+//             postStr += String(t_grzejnik);
+//             postStr +="&cisnienie=";
+//             postStr += String(cisnienie);
+//             postStr +="&wilgotnosc=";
+//             postStr += String(wilgotnosc);
+//             postStr +="&naslonecznienie=";
+//             postStr += String(lux);
+//             postStr += "\r\n\r\n";
+//   
+//       client.println("POST /wifi_pogoda.php HTTP/1.1"); 
+//       client.println("Host: marcin.myvnc.com"); 
+//       client.println("Connection: close"); 
+//       client.println("Content-Type: application/x-www-form-urlencoded"); 
+//       client.print("Content-Length: "); 
+//       client.print(postStr.length()); 
+//       client.print("\n\n"); 
+//       client.print(postStr);
+//             
+//       Serial.println("send to Raspberry");    
+//      }
+//    client.stop();
   } else
   {
     Serial.println("Brak sieci WiFi");
