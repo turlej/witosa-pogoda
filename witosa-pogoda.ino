@@ -23,7 +23,7 @@ BH1750 lightMeter;
 
 const char* server = "api.thingspeak.com";
 const char* server2 = "marcin.eu.pn";
-const char* server3 = "marcin.myvnc.com";
+//const char* server3 = "marcin.myvnc.com";
 
 //uint8_t adres[8];
 const uint8_t pole[8] = {40, 180, 28, 195, 3, 0, 0, 205}; //28-000003c31cb4
@@ -33,6 +33,7 @@ const uint8_t grzejnik[8] = {40, 121, 76, 133, 5, 0, 0, 181}; //28-000005854c79
 uint16_t lux;
 float t_pole, t_dom, t_okno, t_grzejnik, cisnienie, wilgotnosc;
 unsigned int czas, czas2;
+int rssi;
 
 void setup(void){
   pinMode(2, INPUT);
@@ -56,10 +57,10 @@ void setup(void){
   // ArduinoOTA.setPort(8266);
 
   // Hostname defaults to esp8266-[ChipID]
-   ArduinoOTA.setHostname("witosa-pogoda");
+  ArduinoOTA.setHostname("witosa-pogoda");
 
   // No authentication by default
-  // ArduinoOTA.setPassword((const char *)"123");
+  ArduinoOTA.setPassword(haslo_ota);
 
   ArduinoOTA.onStart([]() {
     Serial.println("Start");
@@ -110,6 +111,8 @@ void loop(void){
     t_okno = DS18B20.getTempC(okno);
     t_grzejnik = DS18B20.getTempC(grzejnik);
 
+    rssi = 2*(WiFi.RSSI()+100);
+    
     Serial.print("Pole: ");
     Serial.println(t_pole);
     Serial.print("Dom: ");
@@ -157,7 +160,8 @@ void loop(void){
       }
     client.stop();
     if (client.connect(server2,80)) {
-      String postStr = apiKey;
+      String postStr ="&klucz=";
+             postStr += klucz;
              postStr +="&pole=";
              postStr += String(t_pole);
              postStr +="&dom=";
@@ -172,6 +176,8 @@ void loop(void){
              postStr += String(wilgotnosc);
              postStr +="&naslonecznienie=";
              postStr += String(lux);
+             postStr +="&rssi=";
+             postStr += String(rssi);
              postStr += "\r\n\r\n";
    
        client.println("POST /wifi_pogoda.php HTTP/1.1"); 
