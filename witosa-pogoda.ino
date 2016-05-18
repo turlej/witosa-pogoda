@@ -10,6 +10,7 @@
 #include <OneWire.h>
 #include <DallasTemperature.h>
 #include "hasla.h"
+#include <ESP8266WebServer.h>
 
 #define DHTPIN 0
 #define DHTTYPE DHT22
@@ -20,10 +21,11 @@ DallasTemperature DS18B20(&oneWire);
 WiFiClient client;
 Adafruit_BMP085 bmp;
 BH1750 lightMeter;
+ESP8266WebServer server(80);
 
-const char* server = "api.thingspeak.com";
+const char* server3 = "api.thingspeak.com";
 const char* server2 = "marcin.eu.pn";
-//const char* server3 = "marcin.myvnc.com";
+
 
 //uint8_t adres[8];
 const uint8_t pole[8] = {40, 180, 28, 195, 3, 0, 0, 205}; //28-000003c31cb4
@@ -32,8 +34,73 @@ const uint8_t okno[8] = {40, 128, 16, 160, 5, 0, 0, 20}; //28-000005a01080
 const uint8_t grzejnik[8] = {40, 121, 76, 133, 5, 0, 0, 181}; //28-000005854c79
 uint16_t lux;
 float t_pole, t_dom, t_okno, t_grzejnik, cisnienie, wilgotnosc;
-unsigned int czas, czas2;
+unsigned int czas=5, czas2;
 int rssi;
+
+void handleRoot() {
+  String strona;
+  String do_wyslania;
+  
+  do_wyslania += "<html><body>";
+  strona += "<b>Witosa - Pogoda</b><br><br>";
+  strona += "<b>WiFi SSID: ";
+  strona += WiFi.SSID();
+  strona += "</b><br>";
+  strona += "<b>WiFi RSSI: ";
+  strona += WiFi.RSSI();
+  strona += "</b><br>";
+  strona += "Rozmiar pamieci: ";
+  strona += ESP.getFlashChipRealSize()/1024;
+  strona += " KB";
+  strona += "<br>Czas pracy: ";
+  if (millis()/3600000<10) strona += "0";
+  strona += millis()/3600000;
+  strona += ":";
+  if (millis()/60000%60<10) strona += "0";
+  strona += millis()/60000%60;
+  strona += ":";
+  if (millis()/1000%60<10) strona += "0";
+  strona += millis()/1000%60;
+
+  strona += "<br><br>Pole: ";
+  strona += t_pole;
+  strona += "&deg;C<br>";
+  strona += "Dom: ";
+  strona += t_dom;
+  strona += "&deg;C<br>";
+  strona += "Okno: ";
+  strona += t_okno;
+  strona += "&deg;C<br>";
+  strona += "Grzejnik: ";
+  strona += t_grzejnik;
+  strona += "&deg;C<br>";
+  strona += "Cisnienie: ";
+  strona += cisnienie;
+  strona += "hPa<br>";
+  strona += "Wilgotnosc: ";
+  strona += wilgotnosc;
+  strona += "%<br><br>";
+  
+  do_wyslania += strona;
+  do_wyslania += "<a href='http://192.168.2.111/'>Odswierz</a><br><br><a href='http://192.168.2.111/reboot'>Reset ESP CPU</a></body></html>";
+  do_wyslania += "</body></html>";
+  server.send(200, "text/html", do_wyslania);
+}
+
+void handleNotFound(){
+  String message = "File Not Found\n\n";
+  message += "URI: ";
+  message += server.uri();
+  message += "\nMethod: ";
+  message += (server.method() == HTTP_GET)?"GET":"POST";
+  message += "\nArguments: ";
+  message += server.args();
+  message += "\n";
+  for (uint8_t i=0; i<server.args(); i++){
+    message += " " + server.argName(i) + ": " + server.arg(i) + "\n";
+  }
+  server.send(404, "text/plain", message);
+}
 
 void setup(void){
   pinMode(2, INPUT);
@@ -43,9 +110,11 @@ void setup(void){
   dht.begin();
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
+  WiFi.config(IPAddress(192,168,2,111), IPAddress(192,168,2,1), IPAddress(255,255,255,0));
   Serial.println("");
   Serial.print("Rozmiar pamieci: ");
   Serial.println(ESP.getFlashChipSize());
+  Serial.println(ESP.getFlashChipRealSize());
 
   // Wait for connection
   while (WiFi.status() != WL_CONNECTED) {
@@ -80,6 +149,18 @@ void setup(void){
     else if (error == OTA_END_ERROR) Serial.println("End Failed");
   });
   ArduinoOTA.begin();
+
+  server.on("/reboot", [](){
+    server.send(200, "text/plain", "Restarting");
+    delay(5000);
+    ESP.restart();
+  });
+
+  server.on("/", handleRoot);
+
+  server.onNotFound(handleNotFound);
+
+  server.begin();
   
   Serial.println("");
   Serial.print("Connected to ");
@@ -92,6 +173,7 @@ void loop(void){
   czas2 = czas;
   czas = millis()/60000;
   ArduinoOTA.handle();
+  server.handleClient();
   if (czas != czas2)
   {
   if (WiFi.status() == WL_CONNECTED)
@@ -128,7 +210,7 @@ void loop(void){
     Serial.print("Swiatlo: ");
     Serial.println(lux);
   
-    if (client.connect(server,80)) {
+    if (client.connect(server3,80)) {
       String postStr = apiKey;
              postStr +="&field1=";
              postStr += String(t_pole);
@@ -192,41 +274,10 @@ void loop(void){
        Serial.println("send to Hosting");    
       }
     client.stop();
-//    if (client.connect(server3,85)) {
-//      String postStr = apiKey;
-//             postStr +="&pole=";
-//             postStr += String(t_pole);
-//             postStr +="&dom=";
-//             postStr += String(t_dom);
-//             postStr +="&okno=";
-//             postStr += String(t_okno);
-//             postStr +="&grzejnik=";
-//             postStr += String(t_grzejnik);
-//             postStr +="&cisnienie=";
-//             postStr += String(cisnienie);
-//             postStr +="&wilgotnosc=";
-//             postStr += String(wilgotnosc);
-//             postStr +="&naslonecznienie=";
-//             postStr += String(lux);
-//             postStr += "\r\n\r\n";
-//   
-//       client.println("POST /wifi_pogoda.php HTTP/1.1"); 
-//       client.println("Host: marcin.myvnc.com"); 
-//       client.println("Connection: close"); 
-//       client.println("Content-Type: application/x-www-form-urlencoded"); 
-//       client.print("Content-Length: "); 
-//       client.print(postStr.length()); 
-//       client.print("\n\n"); 
-//       client.print(postStr);
-//             
-//       Serial.println("send to Raspberry");    
-//      }
-//    client.stop();
   } else
   {
     Serial.println("Brak sieci WiFi");
   }
   }
-  //delay(60000);  
 }
 
