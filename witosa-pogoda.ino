@@ -1,4 +1,4 @@
-#include <DHT.h>
+//#include <DHT.h>
 #include <Wire.h>
 #include <BH1750.h>
 #include <Adafruit_BMP085.h>
@@ -12,9 +12,15 @@
 #include "hasla.h"
 #include <ESP8266WebServer.h>
 
-#define DHTPIN 0
-#define DHTTYPE DHT22
-DHT dht(DHTPIN, DHTTYPE);
+#define HTU21DF_I2CADDR       0x40
+#define HTU21DF_READTEMP      0xE3
+#define HTU21DF_READHUM       0xE5
+#define HTU21DF_WRITEREG      0xE6
+#define HTU21DF_READREG       0xE7
+#define HTU21DF_RESET         0xFE
+//#define DHTPIN 0
+//#define DHTTYPE DHT22
+//DHT dht(DHTPIN, DHTTYPE);
 #define ONE_WIRE_BUS 2  // DS18B20 pin
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature DS18B20(&oneWire);
@@ -102,12 +108,70 @@ void handleNotFound(){
   server.send(404, "text/plain", message);
 }
 
+float pomiar_temperatury(void) {
+  
+  // OK lets ready!
+  Wire.beginTransmission(HTU21DF_I2CADDR);
+  Wire.write(HTU21DF_READTEMP);
+  if (Wire.endTransmission()) return -50.0;
+  
+  delay(50); // add delay between request and actual read!
+  
+  Wire.requestFrom(HTU21DF_I2CADDR, 3);
+
+  uint16_t t;
+  if (Wire.available()) t = Wire.read(); else return -50.0;
+  t <<= 8;
+  if (Wire.available()) t |= Wire.read(); else return -50.0;
+
+  uint8_t crc;
+  if (Wire.available()) crc = Wire.read(); else return -50.0;
+  
+  float temp = t;
+  temp *= 175.72;
+  temp /= 65536;
+  temp -= 46.85;
+
+  return temp;
+}
+
+float pomiar_wilgotnosci(void) {
+  // OK lets ready!
+  Wire.beginTransmission(HTU21DF_I2CADDR);
+  Wire.write(HTU21DF_READHUM);
+  if (Wire.endTransmission()) return -1.0;
+  
+  delay(50); // add delay between request and actual read!
+  
+  Wire.requestFrom(HTU21DF_I2CADDR, 3);
+
+  uint16_t h;
+  if (Wire.available()) h = Wire.read(); else return -1.0;
+  h <<= 8;
+  if (Wire.available()) h |= Wire.read(); else return -1.0;
+
+  uint8_t crc;
+  if (Wire.available()) crc = Wire.read(); else return -1.0;
+
+  float hum = h;
+  hum *= 125;
+  hum /= 65536;
+  hum -= 6;
+
+  return hum;
+}
+
 void setup(void){
   pinMode(2, INPUT);
   Serial.begin(115200);
+  Wire.begin();
+  Wire.beginTransmission(HTU21DF_I2CADDR);
+  Wire.write(HTU21DF_RESET);
+  Wire.endTransmission();
+  delay(15);
   bmp.begin();
   lightMeter.begin();
-  dht.begin();
+  //dht.begin();
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
   WiFi.config(IPAddress(192,168,2,111), IPAddress(192,168,2,1), IPAddress(255,255,255,0));
@@ -182,7 +246,10 @@ void loop(void){
     DS18B20.begin();
     DS18B20.requestTemperatures();
     delay(300);
-    wilgotnosc = dht.readHumidity();
+    //wilgotnosc = dht.readHumidity();
+    wilgotnosc = pomiar_wilgotnosci();
+    if (wilgotnosc < 0) wilgotnosc = pomiar_wilgotnosci();
+    if (wilgotnosc>100) {wilgotnosc = 100.0;}
     delay(100);
     lux = lightMeter.readLightLevel();
     delay(100);
