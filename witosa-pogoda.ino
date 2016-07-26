@@ -11,6 +11,8 @@
 #include <DallasTemperature.h>
 #include "hasla.h"
 #include <ESP8266WebServer.h>
+#include "FS.h"
+#include "ThingSpeak.h"
 
 #define HTU21DF_I2CADDR       0x40
 #define HTU21DF_READTEMP      0xE3
@@ -29,9 +31,9 @@ Adafruit_BMP085 bmp;
 BH1750 lightMeter;
 ESP8266WebServer server(80);
 
-const char* server3 = "api.thingspeak.com";
-const char* server2 = "marcin.eu.pn";
-
+//const char* server3 = "api.thingspeak.com";
+String server2 = "73f7dc8f.eu.ngrok.io";
+File f;
 
 //uint8_t adres[8];
 const uint8_t pole[8] = {40, 180, 28, 195, 3, 0, 0, 205}; //28-000003c31cb4
@@ -46,7 +48,15 @@ int rssi;
 void handleRoot() {
   String strona;
   String do_wyslania;
-  
+  for (uint8_t i=0; i<server.args(); i++){
+    if (server.argName(i)=="serwer")
+    {
+      server2=server.arg(i);
+      f = SPIFFS.open("/serwer.txt", "w");
+      f.println(server.arg(i));
+      f.close();
+    }
+  }
   do_wyslania += "<html><body>";
   strona += "<b>Witosa - Pogoda</b><br><br>";
   strona += "<b>WiFi SSID: ";
@@ -68,7 +78,14 @@ void handleRoot() {
   if (millis()/1000%60<10) strona += "0";
   strona += millis()/1000%60;
 
-  strona += "<br><br>Pole: ";
+  strona += "<br><br><form>";
+  strona += "Serwer: <input type='text' name='serwer' value='";
+  strona += server2;
+  strona += "'>";
+  strona += "<button type='submit' formaction='http://192.168.2.111/' formmethod='GET'><font size='2'>Zapisz</font></button>";
+  strona += "</form>";
+  
+  strona += "Pole: ";
   strona += t_pole;
   strona += "&deg;C<br>";
   strona += "Dom: ";
@@ -186,6 +203,12 @@ void setup(void){
     Serial.print(".");
   }
 
+  SPIFFS.begin();
+  SPIFFS.format();
+//  f = SPIFFS.open("/serwer.txt", "r");
+//  server2 = f.readStringUntil('\r');
+//  f.close();
+  
   // Port defaults to 8266
   // ArduinoOTA.setPort(8266);
 
@@ -215,7 +238,7 @@ void setup(void){
   ArduinoOTA.begin();
 
   server.on("/reboot", [](){
-    server.send(200, "text/plain", "Restarting");
+    server.send(200, "text/html", "<html><body>Restarting<br><a href='http://192.168.2.111/'>Odswiez</a></body></html>");
     delay(5000);
     ESP.restart();
   });
@@ -231,6 +254,8 @@ void setup(void){
   Serial.println(ssid);
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
+
+  ThingSpeak.begin(client);
 }
  
 void loop(void){
@@ -277,38 +302,42 @@ void loop(void){
     Serial.print("Swiatlo: ");
     Serial.println(lux);
   
-    if (client.connect(server3,80)) {
-      String postStr = apiKey;
-             postStr +="&field1=";
-             postStr += String(t_pole);
-             postStr +="&field2=";
-             postStr += String(t_dom);
-             postStr +="&field3=";
-             postStr += String(t_grzejnik);
-             postStr +="&field4=";
-             postStr += String(cisnienie);
-             postStr +="&field5=";
-             postStr += String(wilgotnosc);
-             postStr +="&field6=";
-             postStr += String(t_okno);
-             postStr +="&field8=";
-             postStr += String(lux);
-             postStr += "\r\n\r\n";
-   
-       client.print("POST /update HTTP/1.1\n"); 
-       client.print("Host: api.thingspeak.com\n"); 
-       client.print("Connection: close\n"); 
-       client.print("X-THINGSPEAKAPIKEY: "+apiKey+"\n"); 
-       client.print("Content-Type: application/x-www-form-urlencoded\n"); 
-       client.print("Content-Length: "); 
-       client.print(postStr.length()); 
-       client.print("\n\n"); 
-       client.print(postStr);
-             
-       Serial.println("send to Thingspeak");    
-      }
-    client.stop();
-    if (client.connect(server2,80)) {
+//    if (client.connect(server3,80)) {
+//      String postStr = apiKey;
+//             postStr +="&field1=";
+//             postStr += String(t_pole);
+//             postStr +="&field2=";
+//             postStr += String(t_dom);
+//             postStr +="&field3=";
+//             postStr += String(t_grzejnik);
+//             postStr +="&field4=";
+//             postStr += String(cisnienie);
+//             postStr +="&field5=";
+//             postStr += String(wilgotnosc);
+//             postStr +="&field6=";
+//             postStr += String(t_okno);
+//             postStr +="&field8=";
+//             postStr += String(lux);
+//             postStr += "\r\n\r\n";
+//   
+//       client.print("POST /update HTTP/1.1\n"); 
+//       client.print("Host: api.thingspeak.com\n"); 
+//       client.print("Connection: close\n"); 
+//       client.print("X-THINGSPEAKAPIKEY: "+apiKey+"\n"); 
+//       client.print("Content-Type: application/x-www-form-urlencoded\n"); 
+//       client.print("Content-Length: "); 
+//       client.print(postStr.length()); 
+//       client.print("\n\n"); 
+//       client.print(postStr);
+//             
+//       Serial.println("send to Thingspeak");    
+//      }
+//    client.stop();
+      
+      unsigned int dlugosc2=server2.length()+1;
+      char adres2[dlugosc2];
+      server2.toCharArray(adres2,dlugosc2);
+      if (client.connect(adres2,80)) {
       String postStr ="&klucz=";
              postStr += klucz;
              postStr +="&pole=";
@@ -330,7 +359,9 @@ void loop(void){
              postStr += "\r\n\r\n";
    
        client.println("POST /wifi_pogoda.php HTTP/1.1"); 
-       client.println("Host: marcin.eu.pn"); 
+       client.print("Host: ");
+       client.print(server2);
+       client.print("\n");
        client.println("Connection: close"); 
        client.println("Content-Type: application/x-www-form-urlencoded"); 
        client.print("Content-Length: "); 
@@ -341,6 +372,17 @@ void loop(void){
        Serial.println("send to Hosting");    
       }
     client.stop();
+
+      ThingSpeak.setField(1,t_pole);
+      ThingSpeak.setField(2,t_dom);
+      ThingSpeak.setField(3,t_grzejnik);
+      ThingSpeak.setField(4,cisnienie);
+      ThingSpeak.setField(5,wilgotnosc);
+      ThingSpeak.setField(6,t_okno);
+      ThingSpeak.setField(8,lux);
+      Serial.println("Wysylanie do ThingSpeak...");
+      ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey);
+    
   } else
   {
     Serial.println("Brak sieci WiFi");
