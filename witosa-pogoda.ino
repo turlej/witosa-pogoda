@@ -32,7 +32,7 @@ BH1750 lightMeter;
 ESP8266WebServer server(80);
 
 //const char* server3 = "api.thingspeak.com";
-String server2 = "73f7dc8f.eu.ngrok.io";
+String server2;// = "73f7dc8f.eu.ngrok.io";
 File f;
 
 //uint8_t adres[8];
@@ -204,10 +204,10 @@ void setup(void){
   }
 
   SPIFFS.begin();
-  SPIFFS.format();
-//  f = SPIFFS.open("/serwer.txt", "r");
-//  server2 = f.readStringUntil('\r');
-//  f.close();
+//  SPIFFS.format();
+  f = SPIFFS.open("/serwer.txt", "r");
+  server2 = f.readStringUntil('\r');
+  f.close();
   
   // Port defaults to 8266
   // ArduinoOTA.setPort(8266);
@@ -282,7 +282,8 @@ void loop(void){
     delay(300);
     t_pole = DS18B20.getTempC(pole);
     t_dom = DS18B20.getTempC(dom);
-    t_okno = DS18B20.getTempC(okno);
+//    t_okno = DS18B20.getTempC(okno);
+    t_okno = pomiar_temperatury();
     t_grzejnik = DS18B20.getTempC(grzejnik);
 
     rssi = 2*(WiFi.RSSI()+100);
@@ -333,7 +334,9 @@ void loop(void){
 //       Serial.println("send to Thingspeak");    
 //      }
 //    client.stop();
-      
+
+    if (t_pole>-127 && t_dom>-127 && t_okno>-50 && t_grzejnik>-127)
+    {
       unsigned int dlugosc2=server2.length()+1;
       char adres2[dlugosc2];
       server2.toCharArray(adres2,dlugosc2);
@@ -382,7 +385,7 @@ void loop(void){
       ThingSpeak.setField(8,lux);
       Serial.println("Wysylanie do ThingSpeak...");
       ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey);
-    
+    }
   } else
   {
     Serial.println("Brak sieci WiFi");
