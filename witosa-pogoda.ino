@@ -82,7 +82,7 @@ void handleRoot() {
   strona += "Serwer: <input type='text' name='serwer' value='";
   strona += server2;
   strona += "'>";
-  strona += "<button type='submit' formaction='http://192.168.2.111/' formmethod='GET'><font size='2'>Zapisz</font></button>";
+  strona += "<button type='submit' formaction='/' formmethod='GET'><font size='2'>Zapisz</font></button>";
   strona += "</form>";
   
   strona += "Pole: ";
@@ -105,7 +105,7 @@ void handleRoot() {
   strona += "%<br><br>";
   
   do_wyslania += strona;
-  do_wyslania += "<a href='http://192.168.2.111/'>Odswierz</a><br><br><a href='http://192.168.2.111/reboot'>Reset ESP CPU</a></body></html>";
+  do_wyslania += "<a href='/'>Odswierz</a><br><br><a href='/reboot'>Reset ESP CPU</a></body></html>";
   do_wyslania += "</body></html>";
   server.send(200, "text/html", do_wyslania);
 }
@@ -238,7 +238,7 @@ void setup(void){
   ArduinoOTA.begin();
 
   server.on("/reboot", [](){
-    server.send(200, "text/html", "<html><body>Restarting<br><a href='http://192.168.2.111/'>Odswiez</a></body></html>");
+    server.send(200, "text/html", "<html><body>Restarting<br><a href='/'>Odswiez</a></body></html>");
     delay(5000);
     ESP.restart();
   });
