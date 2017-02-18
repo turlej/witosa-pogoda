@@ -380,22 +380,87 @@ void loop(void){
              
        Serial.println("send to Hosting");    
       }
-    client.stop();
 
-      ThingSpeak.setField(1,t_pole);
-      ThingSpeak.setField(2,t_dom);
-      ThingSpeak.setField(3,t_grzejnik);
-      ThingSpeak.setField(4,cisnienie);
-      ThingSpeak.setField(5,wilgotnosc);
-      ThingSpeak.setField(6,t_okno);
-      ThingSpeak.setField(8,lux);
-      Serial.println("Wysylanie do ThingSpeak...");
-      ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey);
+//      ThingSpeak.setField(1,t_pole);
+//      ThingSpeak.setField(2,t_dom);
+//      ThingSpeak.setField(3,t_grzejnik);
+//      ThingSpeak.setField(4,cisnienie);
+//      ThingSpeak.setField(5,wilgotnosc);
+//      ThingSpeak.setField(6,t_okno);
+//      ThingSpeak.setField(8,lux);
+//      Serial.println("Wysylanie do ThingSpeak...");
+//      ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey);
     }
   } else
   {
     Serial.println("Brak sieci WiFi");
   }
   }
+
+    if (client.available())
+      {
+        String naglowek = client.readStringUntil('\r');
+        if (naglowek=="HTTP/1.1 302 Moved Temporarily")
+        {
+          do
+          {
+            client.readStringUntil('/'); 
+          } while ((client.read()!='/') && (client.available()));
+          
+          if (client.available()) server3 = client.readStringUntil('/');
+          client.stop();
+          unsigned int dlugosc3=server3.length()+1;
+          char adres3[dlugosc3];
+          server3.toCharArray(adres3,dlugosc3);
+          if (client.connect(adres3,80))
+          {
+            String postStr ="&klucz=";
+                   postStr += klucz;
+                   postStr +="&pole=";
+                   postStr += String(t_pole);
+                   postStr +="&dom=";
+                   postStr += String(t_dom);
+                   postStr +="&okno=";
+                   postStr += String(t_okno);
+                   postStr +="&grzejnik=";
+                   postStr += String(t_grzejnik);
+                   postStr +="&cisnienie=";
+                   postStr += String(cisnienie);
+                   postStr +="&wilgotnosc=";
+                   postStr += String(wilgotnosc);
+                   postStr +="&naslonecznienie=";
+                   postStr += String(lux);
+                   postStr +="&rssi=";
+                   postStr += String(rssi);
+                   postStr += "\r\n\r\n";
+         
+             client.println("POST /wifi_pogoda.php HTTP/1.1"); 
+             client.print("Host: ");
+             client.print(server3);
+             client.print("\n");
+             client.println("Connection: close"); 
+             client.println("Content-Type: application/x-www-form-urlencoded"); 
+             client.print("Content-Length: "); 
+             client.print(postStr.length()); 
+             client.print("\n\n"); 
+             client.print(postStr);
+          }
+        }
+        if (naglowek=="HTTP/1.1 200 OK")
+        {
+          client.stop();
+          
+          ThingSpeak.setField(1,t_pole);
+          ThingSpeak.setField(2,t_dom);
+          ThingSpeak.setField(3,t_grzejnik);
+          ThingSpeak.setField(4,cisnienie);
+          ThingSpeak.setField(5,wilgotnosc);
+          ThingSpeak.setField(6,t_okno);
+          ThingSpeak.setField(8,lux);
+          Serial.println("Wysylanie do ThingSpeak...");
+          ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey);
+        }
+      }
+  
 }
 
