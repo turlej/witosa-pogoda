@@ -33,6 +33,8 @@ ESP8266WebServer server(80);
 
 //const char* server3 = "api.thingspeak.com";
 String server2;// = "73f7dc8f.eu.ngrok.io";
+String server3;
+
 File f;
 
 //uint8_t adres[8];
@@ -84,6 +86,10 @@ void handleRoot() {
   strona += "'>";
   strona += "<button type='submit' formaction='/' formmethod='GET'><font size='2'>Zapisz</font></button>";
   strona += "</form>";
+
+  strona += "Przekierowanie: ";
+  strona += server3;
+  strona += "<br><br>";
   
   strona += "Pole: ";
   strona += t_pole;
