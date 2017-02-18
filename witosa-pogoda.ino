@@ -343,6 +343,16 @@ void loop(void){
 
     if (t_pole>-127 && t_dom>-127 && t_okno>-50 && t_grzejnik>-127)
     {
+          ThingSpeak.setField(1,t_pole);
+          ThingSpeak.setField(2,t_dom);
+          ThingSpeak.setField(3,t_grzejnik);
+          ThingSpeak.setField(4,cisnienie);
+          ThingSpeak.setField(5,wilgotnosc);
+          ThingSpeak.setField(6,t_okno);
+          ThingSpeak.setField(8,lux);
+          Serial.println("Wysylanie do ThingSpeak...");
+          ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey);
+      
       unsigned int dlugosc2=server2.length()+1;
       char adres2[dlugosc2];
       server2.toCharArray(adres2,dlugosc2);
@@ -449,16 +459,7 @@ void loop(void){
         if (naglowek=="HTTP/1.1 200 OK")
         {
           client.stop();
-          
-          ThingSpeak.setField(1,t_pole);
-          ThingSpeak.setField(2,t_dom);
-          ThingSpeak.setField(3,t_grzejnik);
-          ThingSpeak.setField(4,cisnienie);
-          ThingSpeak.setField(5,wilgotnosc);
-          ThingSpeak.setField(6,t_okno);
-          ThingSpeak.setField(8,lux);
-          Serial.println("Wysylanie do ThingSpeak...");
-          ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey);
+         
         }
       }
   
